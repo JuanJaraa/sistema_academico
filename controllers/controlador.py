@@ -4,6 +4,12 @@ from models.estudiante import Estudiante
 from models.docente import Docente
 from models.administrativo import Administrativo
 from view.vista import Vista
+# [AC2 - NUEVO] imports de las nuevas clases
+from models.persona import Persona
+from models.grupo import GrupoAcademico
+from models.excepciones import (EstudianteYaMatriculadoError, GrupoLlenoError,
+                                EstudianteNoMatriculadoError, AsignaturaNoEncontradaError,
+                                ProgramaNoEncontradoError)
 
 class Controlador:
     def __init__(self):
@@ -11,6 +17,7 @@ class Controlador:
         self.programas = []
         self.asignaturas = []
         self.personas = []  # una sola lista con estudiantes, docentes y administrativos
+        self.grupos = []  # [AC2 - NUEVO] lista de grupos académicos
 
     def crear_programas_y_asignaturas(self):
         self.vista.titulo("1. CREACIÓN DE PROGRAMAS Y ASIGNATURAS")
@@ -93,11 +100,119 @@ class Controlador:
 
     def recorrido_polimorfico(self):
         self.vista.titulo("7. RECORRIDO POLIMÓRFICO")
-        # Un solo ciclo, sin preguntar el tipo: Python usa la versión de cada clase
         for p in self.personas:
             self.vista.mensaje(p.mostrar_informacion())
             self.vista.mensaje(p.realizar_actividad_principal())
             self.vista.mensaje("")
+
+    # [AC2] A partir de aquí: métodos agregados en la Actividad 2
+  
+
+    # [AC2 - NUEVO] Búsquedas que lanzan excepción (Fase 4)
+    def buscar_asignatura(self, codigo):
+        for a in self.asignaturas:
+            if a.get_codigo() == codigo:
+                return a
+        raise AsignaturaNoEncontradaError(codigo)
+
+    def buscar_programa(self, codigo):
+        for p in self.programas:
+            if p.get_codigo() == codigo:
+                return p
+        raise ProgramaNoEncontradoError(codigo)
+
+    # [AC2 - NUEVO] Fase 1: Persona ya no se puede instanciar
+    def probar_persona_abstracta(self):
+        self.vista.titulo("8. PERSONA ES UNA CLASE ABSTRACTA")
+        try:
+            Persona("9999", "Persona Genérica", "generica@umanizales.edu.co")
+        except TypeError:
+            self.vista.error("no se puede crear una Persona directamente porque es una clase abstracta. Debe ser Estudiante, Docente o Administrativo.")
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+    # [AC2 - NUEVO] Fase 2 y 3: grupos con su horario
+    def crear_grupos(self):
+        self.vista.titulo("9. CREACIÓN DE GRUPOS ACADÉMICOS Y HORARIOS")
+        asig1 = self.asignaturas[0]
+        asig2 = self.asignaturas[1]
+        doc1 = self.personas[2]
+        doc2 = self.personas[3]
+
+   
+        g1 = GrupoAcademico("G01", asig1, doc1, 2, "Lunes", "08:00", "10:00", "B-201")
+        g2 = GrupoAcademico("G02", asig1, doc2, 3, "Martes", "10:00", "12:00", "B-305")
+        g3 = GrupoAcademico("G03", asig2, doc2, 30, "Jueves", "14:00", "16:00", "A-102")
+        self.grupos = [g1, g2, g3]
+
+        for g in self.grupos:
+            self.vista.mostrar(g.mostrar_informacion_grupo())
+
+    # [AC2 - NUEVO] Matrículas correctas, duplicada y grupo lleno
+    def probar_matriculas(self):
+        self.vista.titulo("10. MATRÍCULA DE ESTUDIANTES")
+        g1 = self.grupos[0]  # capacidad máxima: 2
+        est1 = self.personas[0]
+        est2 = self.personas[1]
+        est3 = Estudiante("1003", "Valentina Rojas", "valentina@umanizales.edu.co", "E003",
+                          self.programas[0], 2, 4.5)
+        self.personas.append(est3)
+
+        # Matrículas correctas
+        self.vista.mensaje(g1.matricular_estudiante(est1))
+        self.vista.mensaje(g1.matricular_estudiante(est2))
+
+        # Matrícula duplicada
+        try:
+            g1.matricular_estudiante(est1)
+        except EstudianteYaMatriculadoError as e:
+            self.vista.error(str(e))
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+        # Superar la capacidad del grupo
+        try:
+            g1.matricular_estudiante(est3)
+        except GrupoLlenoError as e:
+            self.vista.error(str(e))
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+        self.vista.mostrar("\n" + g1.mostrar_estudiantes())
+
+    # [AC2 - NUEVO] Retiro correcto y retiro de un estudiante inexistente
+    def probar_retiros(self):
+        self.vista.titulo("11. RETIRO DE ESTUDIANTES")
+        g1 = self.grupos[0]
+
+        self.vista.mensaje(g1.retirar_estudiante("E002"))
+
+        try:
+            g1.retirar_estudiante("E002")  # ya fue retirado
+        except EstudianteNoMatriculadoError as e:
+            self.vista.error(str(e))
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+        # Con el cupo liberado, ahora sí se puede matricular al tercer estudiante
+        self.vista.mensaje(g1.matricular_estudiante(self.personas[6]))
+        self.vista.mostrar("\n" + g1.mostrar_estudiantes())
+
+    # [AC2 - NUEVO] Búsquedas de asignatura y programa inexistentes
+    def probar_busquedas(self):
+        self.vista.titulo("12. BÚSQUEDAS DE ASIGNATURAS Y PROGRAMAS")
+        self.vista.mensaje("Asignatura encontrada: " + self.buscar_asignatura("PROG1").get_nombre())
+        self.vista.mensaje("Programa encontrado: " + self.buscar_programa("ISI01").get_nombre())
+
+        try:
+            self.buscar_asignatura("XYZ99")
+        except AsignaturaNoEncontradaError as e:
+            self.vista.error(str(e))
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+        try:
+            self.buscar_programa("NOEXISTE")
+        except ProgramaNoEncontradoError as e:
+            self.vista.error(str(e))
+        self.vista.mensaje("El programa continúa su ejecución.")
+
+        self.vista.titulo("FIN: el programa terminó con normalidad")
 
     def ejecutar(self):
         self.crear_programas_y_asignaturas()
@@ -107,3 +222,9 @@ class Controlador:
         self.probar_valores_invalidos()
         self.mostrar_cada_tipo()
         self.recorrido_polimorfico()
+        # [AC2 - NUEVO] nuevas fases de la Actividad 2
+        self.probar_persona_abstracta()
+        self.crear_grupos()
+        self.probar_matriculas()
+        self.probar_retiros()
+        self.probar_busquedas()

@@ -36,9 +36,10 @@ class ProgramaAcademico:
         self.__num_semestres = num_semestres
         return True
 
-    # Devuelve el texto con los datos (la vista se encarga de imprimirlo)
+    
     def mostrar_informacion(self):
         texto = "Programa: " + self.__nombre + "\n"
         texto += "  Código: " + self.__codigo + "\n"
         texto += "  Facultad: " + self.__facultad + "\n"
         texto += "  Semestres: " + str(self.__num_semestres)
+        return texto  # [AC2 - CORREGIDO] faltaba el return
